@@ -1,21 +1,36 @@
 #!/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
-#DARK THEME
+CONFIG="/home/yordin/Projects/autotheme/config.ini"
+ENV="DARK_ENV"
 
-CONF_GTK="'Elemactary-Dark'"
-CONF_WALLPAPER="dark.jpg"
-CONF_DOCK="dark-mode-transparent"
+read_conf() {
+    local SECTION="$1"
+    local KEY="$2"
+    local FILE="$3"
+    sed -n '/^\['$SECTION'\]/,/^\[.*\]/p' "$FILE" | awk -F "=" '/^\s*'"$KEY"'\s*/ {gsub(/^[ \t]+|[ \t]+$/, "", $2); print $2; exit}'
+}
 
-PID=$(pgrep gnome-session)
-export DBUS_SESSION_BUS_ADDRESS=$(grep -z DBUS_SESSION_BUS_ADDRESS /proc/$PID/environ|cut -d= -f2-)
+#MAIN CONFIG
+hourSunrises=$(read_conf "MAIN" "hour_sunrises" "$CONFIG")
+hourSunset=$(read_conf "MAIN" "hour_sunset" "$CONFIG")
+pathWallpaper=$(read_conf "MAIN" "path_wallpaper" "$CONFIG")
+pathDockTheme=$(read_conf "MAIN" "path_dock_theme" "$CONFIG")
+hourNow=$(date +"%H")
 
-GTKNOW=$(/usr/bin/gsettings get org.gnome.desktop.interface gtk-theme)
+#SELECT ENV
+ENV="DARK_ENV"
 
-if [ "$GTKNOW" != "$CONF_GTK" ]; then
-    DIR="/home/yordin/Pictures/Wallpapers"
-    PIC=$(ls $DIR/$CONF_WALLPAPER | shuf -n1)
-    cp /home/yordin/.local/share/plank/themes/$CONF_DOCK/dock.theme /home/yordin/.local/share/plank/themes/my-dock/dock.theme
-    gsettings set org.gnome.desktop.interface gtk-theme "$CONF_GTK"
-    gsettings set org.gnome.desktop.background picture-uri "file://$PIC"
-fi
+#ENV CONFIG
+gtk=$(read_conf "$ENV" "gtk" "$CONFIG")
+wallpaper=$(read_conf "$ENV" "wallpaper" "$CONFIG")
+dock=$(read_conf "$ENV" "dock" "$CONFIG")
+
+#CHANGE ENV
+pid=$(pgrep gnome-session)
+export DBUS_SESSION_BUS_ADDRESS=$(grep -z DBUS_SESSION_BUS_ADDRESS /proc/$pid/environ|cut -d= -f2-)
+
+pic=$(ls $pathWallpaper/$wallpaper | shuf -n1)
+cp $dock $pathDockTheme
+gsettings set org.gnome.desktop.interface gtk-theme "$gtk"
+gsettings set org.gnome.desktop.background picture-uri "file://$pic"
